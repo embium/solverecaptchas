@@ -6,6 +6,7 @@ import os
 import requests
 import shutil
 import sys
+import time
 import tempfile
 import wave
 
@@ -82,16 +83,17 @@ def main(pageurl, sitekey):
         page.goto(pageurl, wait_until='commit')
         # Wait for load state
         page.wait_for_load_state("load")
-        # Wait for image frame to be available
-        page.wait_for_selector("iframe[src*=\"api2/bframe\"]", state="attached")
-        # Get frames
+        # Wait for checkbox frame to be available
+        page.wait_for_selector("iframe[src*=\"api2/anchor\"]", state="visible")
         checkbox_frame = next(frame for frame in page.frames if "api2/anchor" in frame.url)
-        image_frame = next(frame for frame in page.frames if "api2/bframe" in frame.url)
         # Wait for checkbox to be visible
         checkbox = checkbox_frame.wait_for_selector("#recaptcha-anchor")
         # Click checkbox
         checkbox.click()
-        # Wait for audio button to be visible
+        # Wait for image frame to be visible
+        page.wait_for_selector("iframe[src*=\"api2/bframe\"]", state="visible")
+        image_frame = next(frame for frame in page.frames if "api2/bframe" in frame.url)
+        # Obtain audio button
         audio_button = image_frame.wait_for_selector('#recaptcha-audio-button')
         # Click audio button
         audio_button.click()

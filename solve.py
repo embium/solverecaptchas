@@ -16,7 +16,21 @@ from pydub import AudioSegment
 from urllib.parse import urlparse
 from vosk import Model, KaldiRecognizer, SetLogLevel
 
+from flask import Flask, request
+
+app = Flask(__name__)
+
 SetLogLevel(-1)
+
+@app.route("/", methods=['GET'])
+def solve():
+    args = request.args
+    if 'pageurl' not in args or 'sitekey' not in args:
+        return 'Parameters pageurl and sitekey are required'
+    pageurl = args['pageurl']
+    sitekey = args['sitekey']
+    response = main(pageurl, sitekey, headless=True)
+    return response
 
 def mp3_to_wav(mp3_filename):
     wav_filename = mp3_filename.replace(".mp3", ".wav")
@@ -54,7 +68,7 @@ def get_page(
             return response.content
         return response.text
 
-def main(pageurl, sitekey):
+def main(pageurl, sitekey, headless=False):
     # Code we will inject into the page
     widget_code = (f"<script src=https://www.google.com/recaptcha/api.js?hl=en async defer></script>"
                    f"<div class=g-recaptcha data-sitekey={sitekey}>"
@@ -64,7 +78,7 @@ def main(pageurl, sitekey):
     netloc = parsed_url.netloc
     with sync_playwright() as p:
         # Launch web browser
-        browser = p.webkit.launch(headless=False)
+        browser = p.webkit.launch(headless=headless)
         # Open a new page
         page = browser.new_page()
         # Apply anti-bot stealth
@@ -127,7 +141,7 @@ def main(pageurl, sitekey):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print('This script requires 2 arguments - (pageurl, sitekey)')
+        app.run()
     else:
         pageurl = sys.argv[1]
         sitekey = sys.argv[2]

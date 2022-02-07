@@ -16,11 +16,7 @@ from pydub import AudioSegment
 from urllib.parse import urlparse
 from vosk import Model, KaldiRecognizer, SetLogLevel
 
-SetLogLevel(0)
-
-if not os.path.exists("model"):
-    print ("Please download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder.")
-    exit(1)
+SetLogLevel(-1)
 
 def mp3_to_wav(mp3_filename):
     wav_filename = mp3_filename.replace(".mp3", ".wav")

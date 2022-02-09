@@ -7,7 +7,8 @@ import shutil
 import sys
 import tempfile
 import time
-import utils
+
+import playwright_nonocaptcha.utils as utils
 
 from playwright.async_api import async_playwright, TimeoutError
 from playwright_stealth import stealth_async
@@ -23,16 +24,16 @@ class Solver(object):
         self.headless = headless
     
     async def start(self):
-        self.browser = await self.get_browser(self.headless)
+        self.browser = await self.get_browser()
         self.page = await self.new_page()
         await self.apply_stealth()
         await self.reroute_requests()
         await self.goto_page()
         await self.click_checkbox()
         await self.click_audio_button()
-        result = None
         while 1:
-            if not await self.check_detection(timeout=5):
+            result = await self.check_detection(timeout=5)
+            if result == 'solve more' or not result:
                 await self.solve_audio()
                 result = await self.get_recaptcha_response()
                 if result:
@@ -43,11 +44,11 @@ class Solver(object):
         if result:
             return result
 
-    async def get_browser(self, headless):
+    async def get_browser(self):
         playwright = await async_playwright().start()
         if self.proxy:
             self.proxy = {'server': self.proxy}
-        browser = await playwright.webkit.launch(headless=headless, proxy=self.proxy)
+        browser = await playwright.firefox.launch(headless=self.headless, proxy=self.proxy)
         return browser
     
     async def new_page(self):
@@ -58,15 +59,14 @@ class Solver(object):
         await stealth_async(self.page)
 
     async def reroute_requests(self):
-        parsed_url = urlparse(pageurl)
+        parsed_url = urlparse(self.pageurl)
         scheme = parsed_url.scheme
         netloc = parsed_url.netloc
         await self.page.route(f"{scheme}://{netloc}/*", lambda route: route.fulfill(
             content_type="text/html",
             body="<script src=https://code.jquery.com/jquery-3.6.0.min.js></script>"
                  f"<script src=https://www.google.com/recaptcha/api.js?hl=en></script>"
-                 f"<div class=g-recaptcha data-sitekey={sitekey}>"
-                "</div>")
+                 f"<div class=g-recaptcha data-sitekey={self.sitekey}></div>")
         )
 
     async def goto_page(self):
@@ -114,13 +114,3 @@ class Solver(object):
 
     async def cleanup(self):
         await self.browser.close()
-
-if __name__ == "__main__":
-    pageurl = sys.argv[1]
-    sitekey = sys.argv[2]
-    if len(sys.argv) == 4:
-        proxy = sys.argv[3]
-    else:
-        proxy = None
-    solver = Solver(pageurl, sitekey, proxy=proxy)
-    print(asyncio.run(solver.start()))

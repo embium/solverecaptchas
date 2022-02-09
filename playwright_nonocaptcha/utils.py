@@ -47,20 +47,10 @@ async def save_file(file, data, binary=False):
     async with aiofiles.open(file, mode=mode) as f:
         await f.write(data)
 
-
 async def load_file(file, binary=False):
     mode = "r" if not binary else "rb"
     async with aiofiles.open(file, mode=mode) as f:
         return await f.read()
-
-def merge_dict(dict1, dict2):
-    """Merge two dictionaries into new one."""
-    new_dict = {}
-    if dict1:
-        new_dict.update(dict1)
-    if dict2:
-        new_dict.update(dict2)
-    return new_dict
 
 @threaded
 def get_page_win(

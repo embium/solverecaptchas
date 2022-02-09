@@ -48,7 +48,10 @@ class Solver(object):
         playwright = await async_playwright().start()
         if self.proxy:
             self.proxy = {'server': self.proxy}
-        browser = await playwright.firefox.launch(headless=self.headless, proxy=self.proxy)
+        browser = await playwright.webkit.launch(
+            headless=self.headless,
+            proxy=self.proxy
+        )
         return browser
     
     async def new_page(self):
@@ -62,10 +65,11 @@ class Solver(object):
         parsed_url = urlparse(self.pageurl)
         scheme = parsed_url.scheme
         netloc = parsed_url.netloc
-        await self.page.route(f"{scheme}://{netloc}/*", lambda route: route.fulfill(
+        await self.page.route(f"{scheme}://{netloc}/*", lambda route: 
+            route.fulfill(
             content_type="text/html",
-            body="<script src=https://code.jquery.com/jquery-3.6.0.min.js></script>"
-                 f"<script src=https://www.google.com/recaptcha/api.js?hl=en></script>"
+            body=f"<script src=https://www.google.com/recaptcha/api.js?hl=en><"
+                 "/script>"
                  f"<div class=g-recaptcha data-sitekey={self.sitekey}></div>")
         )
 
@@ -74,14 +78,18 @@ class Solver(object):
         await self.page.wait_for_load_state("load")
 
     async def click_checkbox(self):
-        checkbox_frame = next(frame for frame in self.page.frames if "api2/anchor" in frame.url)
+        checkbox_frame = next(frame for frame in self.page.frames 
+            if "api2/anchor" in frame.url)
         checkbox = await checkbox_frame.wait_for_selector("#recaptcha-anchor")
         await checkbox.click()
 
     async def click_audio_button(self):
-        await self.page.wait_for_selector("iframe[src*=\"api2/bframe\"]", state="visible")
-        self.image_frame = next(frame for frame in self.page.frames if "api2/bframe" in frame.url)
-        audio_button = await self.image_frame.wait_for_selector('#recaptcha-audio-button')
+        await self.page.wait_for_selector("iframe[src*=\"api2/bframe\"]",
+            state="visible")
+        self.image_frame = next(frame for frame in self.page.frames 
+            if "api2/bframe" in frame.url)
+        audio_button = await self.image_frame.wait_for_selector("#recaptcha-au"
+            "dio-button")
         await audio_button.click()
 
     async def check_detection(self, timeout):
@@ -94,22 +102,27 @@ class Solver(object):
                 return 'solve more'
     
     async def solve_audio(self):
-        play_button = await self.image_frame.wait_for_selector("#audio-source", state="attached")
+        play_button = await self.image_frame.wait_for_selector("#audio-source",
+            state="attached")
         audio_source = await play_button.evaluate("node => node.src")
         audio_data = await utils.get_page(audio_source, binary=True)
         tmpd = tempfile.mkdtemp()
         tmpf = os.path.join(tmpd, "audio.mp3")
         await utils.save_file(tmpf, data=audio_data, binary=True)
         audio_response = await utils.get_text(tmpf)
-        audio_response_input = await self.image_frame.wait_for_selector("#audio-response", state="attached")
+        audio_response_input = await self.image_frame.wait_for_selector("#audi"
+            "o-response", state="attached")
         await audio_response_input.fill(audio_response['text'])
-        recaptcha_verify_button = await self.image_frame.wait_for_selector("#recaptcha-verify-button", state="attached")
+        recaptcha_verify_button = await self.image_frame.wait_for_selector("#r"
+            "ecaptcha-verify-button", state="attached")
         await recaptcha_verify_button.click()
         shutil.rmtree(tmpd)
 
     async def get_recaptcha_response(self):
-        await self.page.wait_for_function('document.getElementById("g-recaptcha-response").value !== ""')
-        recaptcha_response = await self.page.evaluate('document.getElementById("g-recaptcha-response").value')
+        await self.page.wait_for_function('document.getElementById("g-recaptch'
+            'a-response").value !== ""')
+        recaptcha_response = await self.page.evaluate('document.getElementById'
+            '("g-recaptcha-response").value')
         return recaptcha_response
 
     async def cleanup(self):

@@ -25,7 +25,9 @@ setup(
     license=module.__license__,
     description=module.package_info,
     url="https://github.com/embium/playwright-nonocaptcha",
-    long_description=open("README.rst").read(),
+    # Hm, HTTPError: 400 Bad Request from https://test.pypi.org/legacy/
+    # The description failed to render in the default format of reStructuredText. See https://test.pypi.org/help/#description-content-type for more information.
+    # long_description=open("README.rst").read(),
     platforms="all",
     classifiers=[
         "Development Status :: 4 - Beta",

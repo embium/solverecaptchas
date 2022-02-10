@@ -17,10 +17,6 @@ from aiohttp import web
 
 from playwright_nonocaptcha.solver import Solver
 
-parser = argparse.ArgumentParser(description="aiohttp server example")
-parser.add_argument('--path')
-parser.add_argument('--port')
-
 if sys.platform == "win32":
     parent_loop = asyncio.ProactorEventLoop()
     asyncio.set_event_loop(parent_loop)
@@ -45,12 +41,13 @@ async def get_solution(request):
     params = request.rel_url.query
     pageurl = params.get("pageurl")
     sitekey = params.get("sitekey")
+    proxy = params.get("proxy")
     if not pageurl or not sitekey:
         response = {"error": "invalid request"}
     else:
         result = None
         while not result:
-            result = await work(pageurl, sitekey, proxy=None, headless=True)
+            result = await work(pageurl, sitekey, proxy=proxy, headless=True)
             if result:
                 response = {"solution": result}
             else:

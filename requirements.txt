@@ -2,5 +2,6 @@ playwright
 playwright-stealth
 pydub
 vosk
-flask
 requests
+aiohttp
+aiofiles

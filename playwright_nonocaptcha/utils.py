@@ -58,7 +58,6 @@ def get_page_win(
         proxy=None,
         proxy_auth=None,
         binary=False,
-        verify=False,
         timeout=300):
     proxies = None
     if proxy:
@@ -75,7 +74,6 @@ def get_page_win(
         response = session.get(
             url,
             proxies=proxies,
-            verify=verify,
             timeout=timeout)
         if binary:
             return response.content

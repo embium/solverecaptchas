@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import asyncio
 import os
 import shutil
 import sys
@@ -106,11 +105,10 @@ class Solver(object):
         timeout = time.time() + timeout
         while time.time() < timeout:
             content = await self.image_frame.content()
-            if 'Try again later' in content:
+            if 'Please try again.' in content:
                 return 'detected'
             elif 'please solve more' or 'Press PLAY to listen' in content:
                 return 'solve'
-            asyncio.sleep(1)
     
     async def solve_audio(self):
         play_button = await self.image_frame.wait_for_selector("#audio-source",

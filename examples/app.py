@@ -26,10 +26,11 @@ else:
 
 app = web.Application()
 
-async def work(pageurl, sitekey, proxy, headless):
+async def work(pageurl, sitekey, timeout, proxy, headless):
     client = Solver(
         pageurl,
         sitekey,
+        timeout=timeout,
         proxy=proxy,
         headless=headless
     )
@@ -42,12 +43,14 @@ async def get_solution(request):
     pageurl = params.get("pageurl")
     sitekey = params.get("sitekey")
     proxy = params.get("proxy")
+    timeout = 300*1000
     if not pageurl or not sitekey:
         response = {"error": "invalid request"}
     else:
         result = None
         while not result:
-            result = await work(pageurl, sitekey, proxy=proxy, headless=True)
+            result = await work(
+                pageurl, sitekey, timeout=timeout, proxy=proxy, headless=True)
             if result:
                 response = {"solution": result}
             else:

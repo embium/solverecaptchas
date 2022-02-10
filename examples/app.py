@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-""" Threaded example using executor to create a new event loop for running a
-task. Each task will continue to retry solving until it succeeds or times-out
-per the specified duration. Default is 180 seconds (3 minutes). On shutdown
-cleanup will propagate, hopefully closing left-over browsers and removing
-temporary profile folders.
-"""
-
-import argparse
 import asyncio
-import shutil
 import sys
 
 from aiohttp import web
+from urllib.parse import unquote
 
 from playwright_nonocaptcha.solver import Solver
+
 
 if sys.platform == "win32":
     parent_loop = asyncio.ProactorEventLoop()
@@ -50,7 +43,7 @@ async def get_solution(request):
         result = None
         while not result:
             result = await work(
-                pageurl, sitekey, timeout=timeout, proxy=proxy, headless=True)
+                unquote(pageurl), sitekey, timeout=timeout, proxy=proxy, headless=True)
             if result:
                 response = {"solution": result}
             else:
@@ -67,5 +60,4 @@ async def app():
     return app
 
 if __name__ == "__main__":
-    args = parser.parse_args()
-    web.run_app(app, path=args.path, port=args.port)
+    web.run_app(app())

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import asyncio
 import os
 import shutil
-import sys
 import tempfile
 import time
 
@@ -37,7 +35,6 @@ class Solver(object):
         await self.goto_page()
         await self.click_checkbox()
         await self.click_audio_button()
-        result = None
         while 1:
             result = await self.check_detection(timeout=5)
             if result == 'solve':
@@ -55,9 +52,18 @@ class Solver(object):
         playwright = await async_playwright().start()
         if self.proxy:
             self.proxy = {'server': self.proxy}
-        browser = await playwright.webkit.launch(
+        browser = await playwright.chromium.launch(
             headless=self.headless,
-            proxy=self.proxy
+            proxy=self.proxy,
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu'],
         )
         return browser
     
@@ -108,7 +114,7 @@ class Solver(object):
                 return 'detected'
             elif 'Press PLAY to listen' in content:
                 return 'solve'
-
+    
     async def solve_audio(self):
         play_button = await self.image_frame.wait_for_selector("#audio-source",
             state="attached")

@@ -8,7 +8,7 @@ import wave
 
 from functools import partial, wraps
 from pydub import AudioSegment
-from vosk import Model, KaldiRecognizer, SetLogLevel
+from vosk import KaldiRecognizer, SetLogLevel
 
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -30,10 +30,9 @@ def mp3_to_wav(mp3_filename):
     return wav_filename
 
 @threaded
-def get_text(mp3_filename):
+def get_text(mp3_filename, model):
     wav_filename = mp3_to_wav(mp3_filename)
     wf = wave.open(wav_filename, "rb")
-    model = Model("model")
     rec = KaldiRecognizer(model, wf.getframerate())
     while True:
         data = wf.readframes(4000)

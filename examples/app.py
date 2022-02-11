@@ -8,7 +8,9 @@ from aiohttp import web
 from urllib.parse import unquote
 
 from playwright_nonocaptcha.solver import Solver
+from vosk import Model, KaldiRecognizer, SetLogLevel
 
+model = Model("model")
 
 if sys.platform == "win32":
     parent_loop = asyncio.ProactorEventLoop()
@@ -25,7 +27,8 @@ async def work(pageurl, sitekey, timeout, proxy, headless):
         sitekey,
         timeout=timeout,
         proxy=proxy,
-        headless=headless
+        headless=headless,
+        model=model
     )
     result = await client.start()
     if result:
@@ -36,6 +39,8 @@ async def get_solution(request):
     pageurl = params.get("pageurl")
     sitekey = params.get("sitekey")
     proxy = params.get("proxy")
+    if proxy:
+        proxy = unquote(proxy)
     timeout = 300*1000
     if not pageurl or not sitekey:
         response = {"error": "invalid request"}
@@ -43,7 +48,7 @@ async def get_solution(request):
         result = None
         while not result:
             result = await work(
-                unquote(pageurl), sitekey, timeout=timeout, proxy=proxy, headless=True)
+                unquote(pageurl), sitekey, timeout=timeout, proxy=proxy, headless=False)
             if result:
                 response = {"solution": result}
             else:

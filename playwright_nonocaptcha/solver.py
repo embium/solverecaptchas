@@ -11,6 +11,7 @@ import playwright_nonocaptcha.utils as utils
 from playwright.async_api import async_playwright, TimeoutError
 from playwright_stealth import stealth_async
 from urllib.parse import urlparse
+from vosk import Model
 
 
 class Solver(object):
@@ -20,12 +21,14 @@ class Solver(object):
         sitekey,
         proxy=None,
         headless=False,
-        timeout=30*1000):
+        timeout=60*1000,
+        model=Model("model")):
         self.pageurl = pageurl
         self.sitekey = sitekey
         self.proxy = proxy
         self.headless = headless
         self.timeout = timeout
+        self.model = model
     
     async def start(self):
         self.browser = await self.get_browser()
@@ -52,18 +55,9 @@ class Solver(object):
         playwright = await async_playwright().start()
         if self.proxy:
             self.proxy = {'server': self.proxy}
-        browser = await playwright.chromium.launch(
+        browser = await playwright.webkit.launch(
             headless=self.headless,
             proxy=self.proxy,
-            args=[
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process',
-                '--disable-gpu'],
         )
         return browser
     
@@ -88,13 +82,15 @@ class Solver(object):
         )
 
     async def goto_page(self):
-        await self.page.goto(self.pageurl,wait_until="commit")
+        await self.page.goto(self.pageurl, wait_until="commit")
         await self.page.wait_for_load_state("load")
 
     async def click_checkbox(self):
-        checkbox_frame = next(frame for frame in self.page.frames 
+        await self.page.wait_for_selector("iframe[src*=\"api2/anchor\"]",
+            state="visible")
+        self.checkbox_frame = next(frame for frame in self.page.frames 
             if "api2/anchor" in frame.url)
-        checkbox = await checkbox_frame.wait_for_selector("#recaptcha-anchor")
+        checkbox = await self.checkbox_frame.wait_for_selector("#recaptcha-anchor")
         await checkbox.click()
 
     async def click_audio_button(self):
@@ -123,7 +119,7 @@ class Solver(object):
         tmpd = tempfile.mkdtemp()
         tmpf = os.path.join(tmpd, "audio.mp3")
         await utils.save_file(tmpf, data=audio_data, binary=True)
-        audio_response = await utils.get_text(tmpf)
+        audio_response = await utils.get_text(tmpf, self.model)
         audio_response_input = await self.image_frame.wait_for_selector("#audi"
             "o-response", state="attached")
         await audio_response_input.fill(audio_response['text'])

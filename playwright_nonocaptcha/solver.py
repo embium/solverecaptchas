@@ -23,6 +23,7 @@ class Solver(object):
         proxy=None,
         headless=False,
         timeout=30*1000,
+        model=Model('model'),
         solve_by_image=True,
         solve_by_audio=False,):
         self.pageurl = pageurl
@@ -40,17 +41,12 @@ class Solver(object):
         await self.apply_stealth()
         await self.reroute_requests()
         await self.goto_page()
+        await self.get_frames()
         await self.click_checkbox()
-        await self.click_audio_button()
-        while 1:
-            result = await self.check_detection(timeout=5)
-            if result == 'solve':
-                await self.solve_audio()
-                result = await self.get_recaptcha_response()
-                if result:
-                    break
-            else:
-                break
+        if self.solve_by_image:
+            result = await self.solve_image()
+        else:
+            result = await self.solve_audio()
         await self.cleanup()
         if result:
             return result
@@ -140,13 +136,16 @@ class Solver(object):
                 shutil.rmtree(tmpd)
                 result = await self.get_recaptcha_response()
                 if result:
-                    break
+                    return result
             else:
                 break
 
     async def solve_image(self):
         im = image.SolveImage(self.page, self.image_frame)
-        result = await im.solve_by_image()
+        await im.solve_by_image()
+        result = await self.get_recaptcha_response()
+        if result:
+            return result
 
     async def get_recaptcha_response(self):
         await self.page.wait_for_function('document.getElementById("g-recaptch'

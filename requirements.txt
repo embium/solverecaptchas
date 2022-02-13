@@ -5,3 +5,6 @@ vosk
 requests
 aiohttp
 aiofiles
+numpy
+pillow
+opencv-python

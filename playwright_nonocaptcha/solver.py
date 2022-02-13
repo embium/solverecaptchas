@@ -7,6 +7,7 @@ import tempfile
 import time
 
 import playwright_nonocaptcha.utils as utils
+import playwright_nonocaptcha.image as image
 
 from playwright.async_api import async_playwright, TimeoutError
 from playwright_stealth import stealth_async
@@ -21,14 +22,17 @@ class Solver(object):
         sitekey,
         proxy=None,
         headless=False,
-        timeout=60*1000,
-        model=Model("model")):
+        timeout=30*1000,
+        solve_by_image=True,
+        solve_by_audio=False,):
         self.pageurl = pageurl
         self.sitekey = sitekey
         self.proxy = proxy
         self.headless = headless
         self.timeout = timeout
         self.model = model
+        self.solve_by_image = solve_by_image
+        self.solve_by_audio = solve_by_audio
     
     async def start(self):
         self.browser = await self.get_browser()
@@ -82,22 +86,25 @@ class Solver(object):
         )
 
     async def goto_page(self):
-        await self.page.goto(self.pageurl, wait_until="commit")
+        await self.page.goto(self.pageurl,wait_until="commit")
         await self.page.wait_for_load_state("load")
 
     async def click_checkbox(self):
-        await self.page.wait_for_selector("iframe[src*=\"api2/anchor\"]",
-            state="visible")
-        self.checkbox_frame = next(frame for frame in self.page.frames 
-            if "api2/anchor" in frame.url)
-        checkbox = await self.checkbox_frame.wait_for_selector("#recaptcha-anchor")
+        checkbox = await self.checkbox_frame.wait_for_selector(
+            "#recaptcha-anchor")
         await checkbox.click()
 
-    async def click_audio_button(self):
+    async def get_frames(self):
+        await self.page.wait_for_selector("iframe[src*=\"api2/anchor\"]",
+            state='attached')
+        self.checkbox_frame = next(frame for frame in self.page.frames 
+            if "api2/anchor" in frame.url)
         await self.page.wait_for_selector("iframe[src*=\"api2/bframe\"]",
-            state="visible")
+            state='attached')
         self.image_frame = next(frame for frame in self.page.frames 
             if "api2/bframe" in frame.url)
+
+    async def click_audio_button(self):
         audio_button = await self.image_frame.wait_for_selector("#recaptcha-au"
             "dio-button")
         await audio_button.click()
@@ -110,23 +117,36 @@ class Solver(object):
                 return 'detected'
             elif 'Press PLAY to listen' in content:
                 return 'solve'
-    
+
     async def solve_audio(self):
-        play_button = await self.image_frame.wait_for_selector("#audio-source",
-            state="attached")
-        audio_source = await play_button.evaluate("node => node.src")
-        audio_data = await utils.get_page(audio_source, binary=True)
-        tmpd = tempfile.mkdtemp()
-        tmpf = os.path.join(tmpd, "audio.mp3")
-        await utils.save_file(tmpf, data=audio_data, binary=True)
-        audio_response = await utils.get_text(tmpf, self.model)
-        audio_response_input = await self.image_frame.wait_for_selector("#audi"
-            "o-response", state="attached")
-        await audio_response_input.fill(audio_response['text'])
-        recaptcha_verify_button = await self.image_frame.wait_for_selector("#r"
-            "ecaptcha-verify-button", state="attached")
-        await recaptcha_verify_button.click()
-        shutil.rmtree(tmpd)
+        await self.click_audio_button()
+        while 1:
+            result = await self.check_detection(timeout=5)
+            if result == 'solve':
+                play_button = await self.image_frame.wait_for_selector("#audio-source",
+                    state="attached")
+                audio_source = await play_button.evaluate("node => node.src")
+                audio_data = await utils.get_page(audio_source, binary=True)
+                tmpd = tempfile.mkdtemp()
+                tmpf = os.path.join(tmpd, "audio.mp3")
+                await utils.save_file(tmpf, data=audio_data, binary=True)
+                audio_response = await utils.get_text(tmpf)
+                audio_response_input = await self.image_frame.wait_for_selector("#audi"
+                    "o-response", state="attached")
+                await audio_response_input.fill(audio_response['text'])
+                recaptcha_verify_button = await self.image_frame.wait_for_selector("#r"
+                    "ecaptcha-verify-button", state="attached")
+                await recaptcha_verify_button.click()
+                shutil.rmtree(tmpd)
+                result = await self.get_recaptcha_response()
+                if result:
+                    break
+            else:
+                break
+
+    async def solve_image(self):
+        im = image.SolveImage(self.page, self.image_frame)
+        result = await im.solve_by_image()
 
     async def get_recaptcha_response(self):
         await self.page.wait_for_function('document.getElementById("g-recaptch'

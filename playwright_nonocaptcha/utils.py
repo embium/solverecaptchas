@@ -1,7 +1,10 @@
 import aiohttp
 import aiofiles
 import asyncio
+import itertools
 import json
+import numpy as np
+import os
 import requests
 import sys
 import wave
@@ -102,3 +105,12 @@ async def get_page(
                 if binary:
                     return await response.read()
                 return await response.text()
+
+def split_image(image_obj, pieces, save_to):
+    """Splits an image into constituent pictures of x"""
+    width, height = image_obj.size
+    row_length = int(np.sqrt(pieces))
+    interval = width // row_length
+    for x, y in itertools.product(range(row_length), repeat=2):
+        cropped = image_obj.crop((interval * x, interval * y, interval * (x + 1), interval * (y + 1)))
+        cropped.save(os.path.join(save_to, f'{y * row_length + x}.jpg'))

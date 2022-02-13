@@ -4,7 +4,7 @@
 import os.path
 import sys
 
-version_info = (0, 0, 1)
+version_info = (0, 0, 8)
 __version__ = "{}.{}.{}".format(*version_info)
 
 
@@ -18,7 +18,7 @@ __author__ = ", ".join(
 )
 
 package_info = (
-    "An asynchronized Python library to automate solving ReCAPTCHA v2 by audio"
+    "An asynchronized Python library to automate solving ReCAPTCHA v2"
 )
 __maintainer__ = __author__
 

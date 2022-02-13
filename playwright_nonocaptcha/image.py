@@ -33,7 +33,6 @@ class SolveImage():
         file_path = os.path.join(self.cur_image_path, f'{self.title}.jpg')
         await utils.save_file(file_path, image, binary=True)  # Save Image
         self.pieces = await self.image_no()  # Detect Type Captcha (9 or 16)
-        print(self.pieces)
         return file_path
 
     async def solve_by_image(self):
@@ -41,33 +40,38 @@ class SolveImage():
         while True:
             file_path = await self.get_start_data()  # Detect pieces and get images
             choices = await self.choose(file_path)  # Choose images of the title
-            if choices:
-                await self.click_image(choices)  # Click this choice
-                if self.pieces == 9:
+            await self.click_image(choices)  # Click this choice
+            if self.pieces == 16:
+                await self.click_verify()  # Click Verify button
+            elif self.pieces == 9:
+                if choices:
                     if await self.is_one_selected():
-                        await self.click_verify()  # Click Verify button
-                        if not await self.is_next() and not await self.is_finish():
-                            await self.click_reload_button()  # Click Reload button
-                    else:
                         await self.cycle_selected(choices)
-                        await self.click_verify()  # Click Verify button
+                        await self.click_verify()
                         if not await self.is_next() and not await self.is_finish():
-                            await self.click_reload_button()  # Click Reload button
+                            await self.click_reload_button()
+                    else:
+                        await self.click_verify()
+                        if not await self.is_next() and not await self.is_finish():
+                            await self.click_reload_button()
                 else:
-                    await self.click_verify()
-                    print('self.click_verify()')
-            else:
-                await self.click_reload_button()
-            await asyncio.sleep(5)
+                    await self.click_reload_button()
+            result = await self.check_detection(5)
+            if result:
+                break
+
 
     async def cycle_selected(self, selected):
         """Cyclic image selector"""
+        old_selected = []
         while True:
+            await self.check_detection(5)
             images = await self.get_images_block(selected)
             new_selected = []
+            if new_selected:
+                old_selected = new_selected
             i = 0
             for image_url in images:
-                # Verify if image change
                 if images != self.download:
                     image = await utils.get_page(
                         image_url, self.proxy, self.proxy_auth, binary=True
@@ -83,30 +87,24 @@ class SolveImage():
                     if self.title != 'vehicles' and self.title.replace('_', ' ') in result:
                         new_selected.append(selected[i])
                 i += 1
-            if new_selected:
+            if new_selected != old_selected:
                 await self.click_image(new_selected)
             else:
                 break
-            await asyncio.sleep(5)
 
     async def click_verify(self):
-        await asyncio.sleep(5)
         await self.image_frame.locator('#recaptcha-verify-button').click()
 
     async def click_reload_button(self):
-        await asyncio.sleep(5)
         await self.image_frame.locator("#recaptcha-reload-button").click()
 
     async def choose(self, image_path):
         """Get list of images selected"""
         selected = []
-        # Use Prediction Image
         if self.pieces == 9:
             image_obj = Image.open(image_path)
-            utils.split_image(image_obj, self.pieces, self.cur_image_path)  # Cut Images
-            # Select elements
+            utils.split_image(image_obj, self.pieces, self.cur_image_path)
             for i in range(self.pieces):
-                # Predict everyone
                 result = await predict(os.path.join(self.cur_image_path, f'{i}.jpg'))
                 if self.title.replace('_', ' ') in result:
                     selected.append(i)
@@ -114,12 +112,11 @@ class SolveImage():
             result = await predict(image_path, self.title.replace('_', ' '))
             if result is not False:
                 image_obj = Image.open(result)
-                utils.split_image(image_obj, self.pieces, self.cur_image_path)  # Cut Images
-                # Select elements
+                utils.split_image(image_obj, self.pieces, self.cur_image_path)
                 for i in range(self.pieces-1):
                     if is_marked(f"{self.cur_image_path}/{i}.jpg"):
                         selected.append(i)
-                os.remove(result)  # Clear tmp archive
+                os.remove(result)
         return selected
 
     async def get_images(self):
@@ -195,7 +192,6 @@ class SolveImage():
             'getElementsByTagName("img")[0].src'
         )
         image_url = await self.image_frame.evaluate(code)
-        print('get_image_url', image_url)
         return image_url
 
     async def image_no(self):
@@ -209,8 +205,7 @@ class SolveImage():
             'length === 0'
         )
         ev = await self.image_frame.evaluate(code)
-        print('is one selected', ev)
-        return not ev
+        return ev
 
     async def is_finish(self):
         """Return true if process is finish"""
@@ -231,7 +226,6 @@ class SolveImage():
 
     async def get_images_block(self, images):
         """Get specific image in the block"""
-        print('get images block')
         images_url = []
         for element in images:
             image_url = (
@@ -257,5 +251,5 @@ class SolveImage():
                 return 'solve'
             else:
                 result = await self.page.evaluate('document.getElementById''("g-recaptcha-response").value !== ""')
-                print(result)
-                return result
+                if result:
+                    return result

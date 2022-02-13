@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from playwright_nonocaptcha import package_dir
 
 __all__ = [
     'is_marked',
@@ -107,7 +106,7 @@ async def predict(file, obj=None):
         confidences = []
         boxes = []
         conf_threshold = 0.5
-        nms_threshold = 0.4
+        nms_threshold = 0.5
 
         for out in outs:
             for detection in out:

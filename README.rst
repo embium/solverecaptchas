@@ -14,7 +14,7 @@
 Playwright nonoCAPTCHA
 ===========
 
-An async Python library to automate solving ReCAPTCHA v2 by audio using
+An async Python library to automate solving ReCAPTCHA v2 using
 Playwright.
 
 Disclaimer

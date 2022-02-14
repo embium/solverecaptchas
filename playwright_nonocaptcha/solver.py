@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import cv2
 import os
 import shutil
 import tempfile
@@ -24,6 +25,7 @@ class Solver(object):
         headless=False,
         timeout=30*1000,
         model=Model('model'),
+        net=cv2.dnn.readNet("model/yolov3.weights", "model/yolov3.cfg"),
         solve_by_image=True,
         solve_by_audio=False,):
         self.pageurl = pageurl
@@ -32,6 +34,7 @@ class Solver(object):
         self.headless = headless
         self.timeout = timeout
         self.model = model
+        self.net = net
         self.solve_by_image = solve_by_image
         self.solve_by_audio = solve_by_audio
     
@@ -43,9 +46,9 @@ class Solver(object):
         await self.goto_page()
         await self.get_frames()
         await self.click_checkbox()
-        result = await self.get_recaptcha_response()
+        result = await self.check_detection(timeout=5)
         if result:
-            return result
+            return await self.get_recaptcha_response()
         if self.solve_by_image:
             result = await self.solve_image()
         else:
@@ -116,11 +119,15 @@ class Solver(object):
                 return 'detected'
             elif 'Press PLAY to listen' in content:
                 return 'solve'
+            else:
+                result = await self.page.evaluate('document.getElementById("g-'
+                    'recaptcha-response").value !== ""')
+                if result:
+                    return result
 
     async def solve_audio(self):
         await self.click_audio_button()
         while 1:
-            result = await self.check_detection(timeout=5)
             if result == 'solve':
                 play_button = await self.image_frame.wait_for_selector("#audio-source",
                     state="attached")
@@ -144,18 +151,18 @@ class Solver(object):
                 break
 
     async def solve_image(self):
-        im = image.SolveImage(self.page, self.image_frame)
+        im = image.SolveImage(self.page, self.image_frame, net=self.net)
         await im.solve_by_image()
         result = await self.get_recaptcha_response()
         if result:
             return result
 
     async def get_recaptcha_response(self):
-        await self.page.wait_for_function('document.getElementById("g-recaptch'
-            'a-response").value !== ""')
-        recaptcha_response = await self.page.evaluate('document.getElementById'
-            '("g-recaptcha-response").value')
-        return recaptcha_response
+        if await self.page.evaluate('document.getElementById("g-recaptcha-resp'
+            'onse").value !== ""'):
+            recaptcha_response = await self.page.evaluate('document.getElementById'
+                '("g-recaptcha-response").value')
+            return recaptcha_response
 
     async def cleanup(self):
         await self.browser.close()

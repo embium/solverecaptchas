@@ -19,9 +19,10 @@ class SolveImage():
     download = None
     cur_image_path = None
 
-    def __init__(self, page, image_frame, loop=None, proxy=None, proxy_auth=None, **kwargs):
+    def __init__(self, page, image_frame, net, proxy=None, proxy_auth=None, **kwargs):
         self.page = page
         self.image_frame = image_frame
+        self.net = net
         self.proxy=proxy
         self.proxy_auth=proxy_auth
 
@@ -31,18 +32,30 @@ class SolveImage():
         image = await self.download_image()
         await self.create_folder(self.title, image)
         file_path = os.path.join(self.cur_image_path, f'{self.title}.jpg')
-        await utils.save_file(file_path, image, binary=True)  # Save Image
-        self.pieces = await self.image_no()  # Detect Type Captcha (9 or 16)
+        await utils.save_file(file_path, image, binary=True)
+        self.pieces = await self.image_no()
         return file_path
 
     async def solve_by_image(self):
         """Go through procedures to solve image"""
         while True:
-            file_path = await self.get_start_data()  # Detect pieces and get images
-            choices = await self.choose(file_path)  # Choose images of the title
-            await self.click_image(choices)  # Click this choice
+            file_path = await self.get_start_data()
+            unsolvable = [
+                'chimneys',
+                'stair',
+                'crosswalk',
+                'mountains_or_hills',
+                'tractors',
+                'palm_trees'
+            ]
+            if self.title in unsolvable:
+                await self.click_reload_button()
+                if not await self.is_next() and not await self.is_finish():
+                    continue
+            choices = await self.choose(file_path)
+            await self.click_image(choices)
             if self.pieces == 16:
-                await self.click_verify()  # Click Verify button
+                await self.click_verify()
             elif self.pieces == 9:
                 if choices:
                     if await self.is_one_selected():
@@ -63,13 +76,10 @@ class SolveImage():
 
     async def cycle_selected(self, selected):
         """Cyclic image selector"""
-        old_selected = []
         while True:
             await self.check_detection(5)
             images = await self.get_images_block(selected)
             new_selected = []
-            if new_selected:
-                old_selected = new_selected
             i = 0
             for image_url in images:
                 if images != self.download:
@@ -77,17 +87,19 @@ class SolveImage():
                         image_url, self.proxy, self.proxy_auth, binary=True
                     )
                     await self.create_folder(self.title, image)
-                    file_path = os.path.join(self.cur_image_path, f'{self.title}.jpg')
-                    await utils.save_file(file_path, image, binary=True)  # Save Image
+                    file_path = os.path.join(
+                        self.cur_image_path, f'{self.title}.jpg')
+                    await utils.save_file(file_path, image, binary=True)
 
-                    result = await predict(file_path)
+                    result = await predict(self.net, file_path)
                     if self.title == 'vehicles':
                         if 'car' in result or 'truck' in result:
                             new_selected.append(selected[i])
-                    if self.title != 'vehicles' and self.title.replace('_', ' ') in result:
+                    if (self.title != 'vehicles' 
+                            and self.title.replace('_', ' ') in result):
                         new_selected.append(selected[i])
                 i += 1
-            if new_selected != old_selected:
+            if new_selected:
                 await self.click_image(new_selected)
             else:
                 break
@@ -105,11 +117,13 @@ class SolveImage():
             image_obj = Image.open(image_path)
             utils.split_image(image_obj, self.pieces, self.cur_image_path)
             for i in range(self.pieces):
-                result = await predict(os.path.join(self.cur_image_path, f'{i}.jpg'))
+                result = await predict(
+                    self.net, os.path.join(self.cur_image_path, f'{i}.jpg'))
                 if self.title.replace('_', ' ') in result:
                     selected.append(i)
         else:
-            result = await predict(image_path, self.title.replace('_', ' '))
+            result = await predict(
+                self.net, image_path, self.title.replace('_', ' '))
             if result is not False:
                 image_obj = Image.open(result)
                 utils.split_image(image_obj, self.pieces, self.cur_image_path)
@@ -139,7 +153,7 @@ class SolveImage():
     async def search_title(self, title):
         """Search title with classes"""
         classes = ('bus', 'car', 'bicycle', 'fire_hydrant', 'crosswalk', 'stair', 'bridge', 'traffic_light',
-                   'vehicles', 'motorcycle', 'boat', 'chimneys')
+                   'vehicles', 'motorbike', 'boat', 'chimneys')
         # Only English and Spanish detected!
         possible_titles = (
             ('autobuses', 'autobús', 'bus', 'buses'),
@@ -152,7 +166,7 @@ class SolveImage():
             ('puentes', 'bridge', 'bridges'),
             ('semaforos', 'semaphore', 'semaphores', 'traffic_lights', 'traffic_light', 'semáforos'),
             ('vehículos', 'vehicles'),
-            ('motocicletas', 'motocicleta', 'motorcycle', 'motorcycle'),
+            ('motocicletas', 'motocicleta', 'motorcycle', 'motorcycle', 'motorbike'),
             ('boat', 'boats', 'barcos', 'barco'),
             ('chimeneas', 'chimneys', 'chimney', 'chimenea')
         )
@@ -181,7 +195,8 @@ class SolveImage():
             os.mkdir(os.path.join('pictures', f'{title}'))
         if not os.path.exists(os.path.join('pictures', 'tmp')):
             os.mkdir(os.path.join('pictures', 'tmp'))
-        self.cur_image_path = os.path.join(os.path.join('pictures', f'{title}'), f'{hash(image)}')
+        self.cur_image_path = os.path.join(
+            os.path.join('pictures', f'{title}'), f'{hash(image)}')
         if not os.path.exists(self.cur_image_path):
             os.mkdir(self.cur_image_path)
 
@@ -222,15 +237,16 @@ class SolveImage():
     async def download_image(self):
         """Download image captcha"""
         self.download = await self.get_image_url()
-        return await utils.get_page(self.download, self.proxy, self.proxy_auth, binary=True)
+        return await utils.get_page(
+            self.download, self.proxy, self.proxy_auth, binary=True)
 
     async def get_images_block(self, images):
         """Get specific image in the block"""
         images_url = []
         for element in images:
             image_url = (
-                f'document.getElementsByClassName("rc-image-tile-wrapper")[{element}].'
-                'getElementsByTagName("img")[0].src'
+                'document.getElementsByClassName("rc-image-tile-wrapper")['
+                f'{element}].getElementsByTagName("img")[0].src'
             )
             result = await self.image_frame.evaluate(image_url)
             images_url.append(result)
@@ -250,6 +266,7 @@ class SolveImage():
             elif 'Press PLAY to listen' in content:
                 return 'solve'
             else:
-                result = await self.page.evaluate('document.getElementById''("g-recaptcha-response").value !== ""')
+                result = await self.page.evaluate('document.getElementById("g-'
+                    'recaptcha-response").value !== ""')
                 if result:
                     return result

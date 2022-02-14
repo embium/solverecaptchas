@@ -37,11 +37,9 @@ def draw_prediction(img, x, y, x_plus_w, y_plus_h):
     cv2.rectangle(img, (x, y), (x_plus_w, y_plus_h), color, cv2.FILLED)
 
 
-async def predict(file, obj=None):
+async def predict(net, file, obj=None):
     """Predict Object on image"""
-    weight_file = f"model/yolov3.weights"
     file_names = f"model/yolov3.txt"
-    file_cfg = f"model/yolov3.cfg"
 
     image = cv2.imread(file)
     width = image.shape[1]
@@ -50,38 +48,6 @@ async def predict(file, obj=None):
 
     with open(file_names, 'r') as f:
         classes = [line.strip() for line in f.readlines()]
-
-    # Import YoloV3
-    try:
-        net = cv2.dnn.readNet(weight_file, file_cfg)
-    except Exception:
-        # Download YoloV3
-        yolo_url = 'https://pjreddie.com/media/files/yolov3.weights'
-
-        import urllib3
-        from tqdm import tqdm
-
-        with urllib3.PoolManager() as http:
-            # Get data from url.
-            data = http.request('GET', yolo_url, preload_content=False)
-
-            try:
-                total_length = int(data.headers['content-length'])
-            except (KeyError, ValueError, AttributeError):
-                total_length = 0
-
-            process_bar = tqdm(total=total_length)
-
-            # 10 * 1024
-            _data = BytesIO()
-            for chunk in data.stream(10240):
-                _data.write(chunk)
-                process_bar.update(len(chunk))
-            process_bar.close()
-        # Save weights matrix
-        with open(weight_file, 'wb') as f:
-            f.write(_data.getvalue())
-        return await predict(file, obj)  # Reload method
 
     if obj is None:
         blob = cv2.dnn.blobFromImage(image, scale, (416, 416), (0, 0, 0), True, crop=False)

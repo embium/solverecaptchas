@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import cv2
 import os
 import shutil
 import tempfile
@@ -9,6 +8,7 @@ import time
 
 import playwright_nonocaptcha.utils as utils
 import playwright_nonocaptcha.image as image
+from playwright_nonocaptcha.predict import yolov5
 
 from playwright.async_api import async_playwright, TimeoutError
 from playwright_stealth import stealth_async
@@ -25,7 +25,7 @@ class Solver(object):
         headless=False,
         timeout=30*1000,
         model=Model('model'),
-        net=cv2.dnn.readNet("model/yolov3.weights", "model/yolov3.cfg"),
+        net=yolov5(),
         solve_by_image=True,
         solve_by_audio=False,):
         self.pageurl = pageurl

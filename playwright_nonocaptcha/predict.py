@@ -1,108 +1,123 @@
-from io import BytesIO
-
 import cv2
+import argparse
 import numpy as np
+
 from PIL import Image
 
+class yolov5():
+    def __init__(self, confThreshold=0.5, nmsThreshold=0.5, objThreshold=0.5):
+        with open('model/yolov5.txt', 'rt') as f:
+            self.classes = f.read().rstrip('\n').split('\n')
+        self.colors = [np.random.randint(0, 255, size=3).tolist() for _ in range(len(self.classes))]
+        num_classes = len(self.classes)
+        anchors = [[10, 13, 16, 30, 33, 23], [30, 61, 62, 45, 59, 119], [116, 90, 156, 198, 373, 326]]
+        self.nl = len(anchors)
+        self.na = len(anchors[0]) // 2
+        self.no = num_classes + 5
+        self.grid = [np.zeros(1)] * self.nl
+        self.stride = np.array([8., 16., 32.])
+        self.anchor_grid = np.asarray(anchors, dtype=np.float32).reshape(self.nl, -1, 2)
+        self.inpWidth = 640
+        self.inpHeight = 640
+        self.net = cv2.dnn.readNet('model/yolov5s.onnx')
+        self.confThreshold = confThreshold
+        self.nmsThreshold = nmsThreshold
+        self.objThreshold = objThreshold
 
-__all__ = [
-    'is_marked',
-    "get_output_layers",
-    "draw_prediction",
-    "predict"
-]
+    def is_marked(self, img_path):
+        """Detect specific color for detect marked"""
+        img = Image.open(img_path).convert('RGB')
+        w, h = img.size
+        for i in range(w):
+            for j in range(h):
+                r, g, b = img.getpixel((i, j))
+                if r == 254 and g == 0 and b == 0:  # Detect Red Color
+                    return True
+        return False
 
+    def _make_grid(self, nx=20, ny=20):
+        xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
+        return np.stack((xv, yv), 2).reshape((-1, 2)).astype(np.float32)
 
-def is_marked(img_path):
-    """Detect specific color for detect marked"""
-    img = Image.open(img_path).convert('RGB')
-    w, h = img.size
-    for i in range(w):
-        for j in range(h):
-            r, g, b = img.getpixel((i, j))
-            if r == 0 and g == 0 and b == 254:  # Detect Blue Color
-                return True
-    return False
+    def predict(self, file, obj=None):
+        frame = cv2.imread(file)
+        blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (self.inpWidth, self.inpHeight), [0, 0, 0], swapRB=True, crop=False)
+        # Sets the input to the network
+        self.net.setInput(blob)
 
+        # Runs the forward pass to get output of the output layers
+        outs = self.net.forward(self.net.getUnconnectedOutLayersNames())[0]
 
-def get_output_layers(net):
-    layer_names = net.getLayerNames()
-    output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
-    return output_layers
+        # inference output
+        outs = 1 / (1 + np.exp(-outs))   ###sigmoid
+        row_ind = 0
+        for i in range(self.nl):
+            h, w = int(self.inpHeight/self.stride[i]), int(self.inpWidth/self.stride[i])
+            length = int(self.na * h * w)
+            if self.grid[i].shape[2:4] != (h,w):
+                self.grid[i] = self._make_grid(w, h)
 
-
-def draw_prediction(img, x, y, x_plus_w, y_plus_h):
-    """Paint Rectangle Blue for detect prediction"""
-    color = 256  # Blue
-    cv2.rectangle(img, (x, y), (x_plus_w, y_plus_h), color, cv2.FILLED)
-
-
-async def predict(net, file, obj=None):
-    """Predict Object on image"""
-    file_names = f"model/yolov3.txt"
-
-    image = cv2.imread(file)
-    width = image.shape[1]
-    height = image.shape[0]
-    scale = 0.00392
-
-    with open(file_names, 'r') as f:
-        classes = [line.strip() for line in f.readlines()]
-
-    if obj is None:
-        blob = cv2.dnn.blobFromImage(image, scale, (416, 416), (0, 0, 0), True, crop=False)
-        net.setInput(blob)
-        outs = net.forward(get_output_layers(net))
-        classes_names = []
-        for out in outs:
-            for detection in out:
+            outs[row_ind:row_ind+length, 0:2] = (outs[row_ind:row_ind+length, 0:2] * 2. - 0.5 + np.tile(self.grid[i],(self.na, 1))) * int(self.stride[i])
+            outs[row_ind:row_ind+length, 2:4] = (outs[row_ind:row_ind+length, 2:4] * 2) ** 2 * np.repeat(self.anchor_grid[i],h*w, axis=0)
+            row_ind += length
+        if not obj:
+            classes_names = []
+            for detection in outs:
                 scores = detection[5:]
                 class_id = int(np.argmax(scores))
                 confidence = scores[class_id]
-                if confidence > 0.5:
-                    classes_names.append(classes[class_id])
-        return classes_names  # Return all names object in the images
-    else:
-        out_path = f"pictures/tmp/{hash(file)}.jpg"
-        blob = cv2.dnn.blobFromImage(image, scale, (416, 416), (0, 0, 0), True, crop=False)
-        net.setInput(blob)
-        outs = net.forward(get_output_layers(net))
-
-        class_ids = []
-        confidences = []
-        boxes = []
-        conf_threshold = 0.5
-        nms_threshold = 0.5
-
-        for out in outs:
-            for detection in out:
+                if confidence > self.confThreshold and detection[4] > self.objThreshold:
+                    print(self.classes[class_id])
+                    classes_names.append(self.classes[class_id])
+            return classes_names  # Return all names object in the images
+        else:
+            frameHeight = frame.shape[0]
+            frameWidth = frame.shape[1]
+            ratioh, ratiow = frameHeight / self.inpHeight, frameWidth / self.inpWidth
+            # Scan through all the bounding boxes output from the network and keep only the
+            # ones with high confidence scores. Assign the box's class label as the class with the highest score.
+            classIds = []
+            confidences = []
+            boxes = []
+            for detection in outs:
                 scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
-                if confidence > 0.5:
-                    center_x = int(detection[0] * width)
-                    center_y = int(detection[1] * height)
-                    w = int(detection[2] * width)
-                    h = int(detection[3] * height)
-                    x = center_x - w / 2
-                    y = center_y - h / 2
-                    class_ids.append(class_id)
+                classId = np.argmax(scores)
+                confidence = scores[classId]
+                if confidence > self.confThreshold and detection[4] > self.objThreshold:
+                    center_x = int(detection[0] * ratiow)
+                    center_y = int(detection[1] * ratioh)
+                    width = int(detection[2] * ratiow)
+                    height = int(detection[3] * ratioh)
+                    left = int(center_x - width / 2)
+                    top = int(center_y - height / 2)
+                    classIds.append(classId)
                     confidences.append(float(confidence))
-                    boxes.append([x, y, w, h])
+                    boxes.append([left, top, width, height])
 
-        indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
-        out = False
-        for i in indices:
-            if classes[int(class_ids[int(i)])] == obj or (obj == 'vehicles' and (
-                    classes[int(class_ids[int(i)])] == 'car' or classes[int(class_ids[int(i)])] == 'truck')):
-                out = out_path
-                box = boxes[i]
-                x = box[0]
-                y = box[1]
-                w = box[2]
-                h = box[3]
-                draw_prediction(image, round(x), round(y), round(x + w), round(y + h))
-            # Save Image
-        if out:
-            cv2.imwrite(out_path, image)
-        return out  # Return path of images or False if not found object
+            # Perform non maximum suppression to eliminate redundant overlapping boxes with
+            # lower confidences.
+            out_path = f"pictures/tmp/{hash(file)}.jpg"
+            print(out_path)
+            indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confThreshold, self.nmsThreshold)
+            out = False
+            for i in indices:
+                print(self.classes[int(classIds[int(i)])])
+                if self.classes[int(classIds[int(i)])] == obj or (obj == 'vehicles' and (
+                                    self.classes[int(classIds[int(i)])] == 'car'
+                                    or self.classes[int(classIds[int(i)])] == 'truck'
+                                    or self.classes[int(classIds[int(i)])] == 'bus')):
+                    out = out_path
+                    box = boxes[i]
+                    left = box[0]
+                    top = box[1]
+                    width = box[2]
+                    height = box[3]
+                    frame = self.drawPred(frame, left, top, left + width, top + height)
+            if out:
+                cv2.imwrite(out_path, frame)
+            return out 
+            
+    def drawPred(self, frame, left, top, right, bottom):
+        # Draw a bounding box.
+        cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 256), cv2.FILLED)
+        return frame

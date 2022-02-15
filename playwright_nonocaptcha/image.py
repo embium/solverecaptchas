@@ -9,7 +9,6 @@ import time
 from PIL import Image
 
 from playwright_nonocaptcha import package_dir
-from playwright_nonocaptcha.predict import predict, is_marked
 import playwright_nonocaptcha.utils as utils
 
 
@@ -91,7 +90,7 @@ class SolveImage():
                         self.cur_image_path, f'{self.title}.jpg')
                     await utils.save_file(file_path, image, binary=True)
 
-                    result = await predict(self.net, file_path)
+                    result = self.net.predict(file_path)
                     if self.title == 'vehicles':
                         if 'car' in result or 'truck' in result:
                             new_selected.append(selected[i])
@@ -117,20 +116,19 @@ class SolveImage():
             image_obj = Image.open(image_path)
             utils.split_image(image_obj, self.pieces, self.cur_image_path)
             for i in range(self.pieces):
-                result = await predict(
-                    self.net, os.path.join(self.cur_image_path, f'{i}.jpg'))
+                result = self.net.predict(os.path.join(self.cur_image_path, f'{i}.jpg'))
+                print(result)
                 if self.title.replace('_', ' ') in result:
                     selected.append(i)
         else:
-            result = await predict(
-                self.net, image_path, self.title.replace('_', ' '))
+            result = self.net.predict(image_path, self.title.replace('_', ' '))
             if result is not False:
                 image_obj = Image.open(result)
                 utils.split_image(image_obj, self.pieces, self.cur_image_path)
                 for i in range(self.pieces-1):
-                    if is_marked(f"{self.cur_image_path}/{i}.jpg"):
+                    if self.net.is_marked(f"{self.cur_image_path}/{i}.jpg"):
                         selected.append(i)
-                os.remove(result)
+                # os.remove(result)
         return selected
 
     async def get_images(self):

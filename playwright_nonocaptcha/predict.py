@@ -67,7 +67,6 @@ class yolov5():
                 class_id = int(np.argmax(scores))
                 confidence = scores[class_id]
                 if confidence > self.confThreshold and detection[4] > self.objThreshold:
-                    print(self.classes[class_id])
                     classes_names.append(self.classes[class_id])
             return classes_names  # Return all names object in the images
         else:
@@ -97,7 +96,6 @@ class yolov5():
             # Perform non maximum suppression to eliminate redundant overlapping boxes with
             # lower confidences.
             out_path = f"pictures/tmp/{hash(file)}.jpg"
-            print(out_path)
             indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confThreshold, self.nmsThreshold)
             out = False
             for i in indices:

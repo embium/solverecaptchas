@@ -117,7 +117,6 @@ class SolveImage():
             utils.split_image(image_obj, self.pieces, self.cur_image_path)
             for i in range(self.pieces):
                 result = self.net.predict(os.path.join(self.cur_image_path, f'{i}.jpg'))
-                print(result)
                 if self.title.replace('_', ' ') in result:
                     selected.append(i)
         else:

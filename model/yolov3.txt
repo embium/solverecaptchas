@@ -1,0 +1,17 @@
+bicycle
+boat
+bridge
+bus
+car
+chimneys
+crosswalk
+fire hydrant
+motorcycles
+mountains or hills
+palm trees
+stair
+taxi
+tow truck
+traffic light
+traffic sign
+truck

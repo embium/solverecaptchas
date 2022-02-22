@@ -107,7 +107,6 @@ class SolveImage():
             for i in range(self.pieces):
                 result = await predict(
                     self.net, os.path.join(self.cur_image_path, f'{i}.jpg'))
-                print(result)
                 if self.title.replace('_', ' ') in result:
                     selected.append(i)
         #else:

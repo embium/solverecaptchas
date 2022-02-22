@@ -94,7 +94,6 @@ async def predict(net, file, obj=None):
         indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
         out = False
         for i in indices:
-            print(obj, classes[int(class_ids[int(i)])])
             if classes[int(class_ids[int(i)])] == obj or (obj == 'vehicles' and (
                     classes[int(class_ids[int(i)])] == 'car' or classes[int(class_ids[int(i)])] == 'truck')):
                 out = out_path

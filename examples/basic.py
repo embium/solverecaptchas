@@ -12,7 +12,11 @@ else:
 if proxy.lower() == "none":
     proxy = None
 
-client = Solver(pageurl, sitekey, proxy=proxy)
-result = asyncio.run(client.start())
-if result:
-    print(result)
+while 1:
+    try:
+        client = Solver(pageurl, sitekey, proxy=proxy, headless=False)
+        result = asyncio.run(client.start())
+        if result:
+            print(result)
+    except:
+        pass

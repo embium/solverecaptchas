@@ -46,9 +46,6 @@ class Solver(object):
         await self.goto_page()
         await self.get_frames()
         await self.click_checkbox()
-        result = await self.check_detection(timeout=5)
-        if result:
-            return await self.get_recaptcha_response()
         if self.solve_by_image:
             result = await self.solve_image()
         else:

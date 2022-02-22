@@ -31,7 +31,7 @@ class SolveImage():
         await self.get_title()
         image = await self.download_image()
         await self.create_folder(self.title, image)
-        file_path = os.path.join(self.cur_image_path, f'{self.title}.jpg')
+        file_path = os.path.join(self.cur_image_path, f'{self.image_hash}_{self.title}.jpg')
         await utils.save_file(file_path, image, binary=True)
         self.pieces = await self.image_no()
         return file_path
@@ -39,6 +39,9 @@ class SolveImage():
     async def solve_by_image(self):
         """Go through procedures to solve image"""
         while True:
+            result = await self.check_detection(3)
+            if result:
+                break
             file_path = await self.get_start_data()
             if self.pieces == 16:
                 await self.click_reload_button()
@@ -57,15 +60,12 @@ class SolveImage():
                             await self.click_reload_button()
                 else:
                     await self.click_reload_button()
-            result = await self.check_detection(1)
-            if result:
-                break
 
 
     async def cycle_selected(self, selected):
         """Cyclic image selector"""
         while True:
-            await self.check_detection(5)
+            await self.check_detection(3)
             images = await self.get_images_block(selected)
             new_selected = []
             i = 0
@@ -76,12 +76,15 @@ class SolveImage():
                     )
                     await self.create_folder(self.title, image)
                     file_path = os.path.join(
-                        self.cur_image_path, f'{self.title}.jpg')
+                        self.cur_image_path, f'{self.image_hash}_{self.title}.jpg')
                     await utils.save_file(file_path, image, binary=True)
 
                     result = await predict(self.net, file_path)
                     if self.title == 'vehicles':
                         if 'car' in result or 'truck' in result or 'bus' in result:
+                            new_selected.append(selected[i])
+                    if self.title == 'motorcycles':
+                        if 'car' in result or 'bicycle' in result or 'motorcycles' in result:
                             new_selected.append(selected[i])
                     if (self.title != 'vehicles' 
                             and self.title.replace('_', ' ') in result):
@@ -103,12 +106,13 @@ class SolveImage():
         selected = []
         if self.pieces == 9:
             image_obj = Image.open(image_path)
-            utils.split_image(image_obj, self.pieces, self.cur_image_path)
+            utils.split_image(image_obj, self.pieces, self.cur_image_path, self.image_hash)
             for i in range(self.pieces):
                 result = await predict(
-                    self.net, os.path.join(self.cur_image_path, f'{i}.jpg'))
+                    self.net, os.path.join(self.cur_image_path, f'{self.image_hash}_{i}.jpg'))
                 if self.title.replace('_', ' ') in result:
                     selected.append(i)
+            os.remove(image_path)
         #else:
         #    result = await predict(
         #        self.net, image_path, self.title.replace('_', ' '))
@@ -176,14 +180,14 @@ class SolveImage():
 
     async def create_folder(self, title, image):
         """Create tmp folder and save image"""
+        self.image_hash = hash(image)
         if not os.path.exists('pictures'):
             os.mkdir('pictures')
         if not os.path.exists(os.path.join('pictures', f'{title}')):
             os.mkdir(os.path.join('pictures', f'{title}'))
         if not os.path.exists(os.path.join('pictures', 'tmp')):
             os.mkdir(os.path.join('pictures', 'tmp'))
-        self.cur_image_path = os.path.join(
-            os.path.join('pictures', f'{title}'), f'{hash(image)}')
+        self.cur_image_path = os.path.join(os.path.join('pictures', f'{title}'))
         if not os.path.exists(self.cur_image_path):
             os.mkdir(self.cur_image_path)
 

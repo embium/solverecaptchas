@@ -46,6 +46,9 @@ async def predict(net, file, obj=None):
     height = image.shape[0]
     scale = 0.00392
 
+    conf_threshold = 0.5
+    nms_threshold = 0.5
+    
     with open(file_names, 'r') as f:
         classes = [line.strip() for line in f.readlines()]
 
@@ -59,7 +62,7 @@ async def predict(net, file, obj=None):
                 scores = detection[5:]
                 class_id = int(np.argmax(scores))
                 confidence = scores[class_id]
-                if confidence > 0.5:
+                if confidence > conf_threshold:
                     classes_names.append(classes[class_id])
         return classes_names  # Return all names object in the images
     else:
@@ -71,15 +74,13 @@ async def predict(net, file, obj=None):
         class_ids = []
         confidences = []
         boxes = []
-        conf_threshold = 0.5
-        nms_threshold = 0.5
 
         for out in outs:
             for detection in out:
                 scores = detection[5:]
                 class_id = np.argmax(scores)
                 confidence = scores[class_id]
-                if confidence > 0.5:
+                if confidence > conf_threshold:
                     center_x = int(detection[0] * width)
                     center_y = int(detection[1] * height)
                     w = int(detection[2] * width)
@@ -93,6 +94,7 @@ async def predict(net, file, obj=None):
         indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
         out = False
         for i in indices:
+            print(obj, classes[int(class_ids[int(i)])])
             if classes[int(class_ids[int(i)])] == obj or (obj == 'vehicles' and (
                     classes[int(class_ids[int(i)])] == 'car' or classes[int(class_ids[int(i)])] == 'truck')):
                 out = out_path

@@ -25,7 +25,7 @@ class Solver(object):
         headless=False,
         timeout=30*1000,
         model=Model('model'),
-        net=cv2.dnn.readNet("model/yolo-obj_last.weights", "model/yolov3.cfg"),
+        net=cv2.dnn.readNet("model/yolov3.weights", "model/yolov3.cfg"),
         solve_by_image=True,
         solve_by_audio=False,):
         self.pageurl = pageurl

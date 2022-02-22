@@ -12,7 +12,7 @@
     :target: https://pypi.org/project/playwright-nonocaptcha/
 
 Playwright nonoCAPTCHA
-===========
+=======================
 
 An async Python library to automate solving ReCAPTCHA v2 using
 Playwright.
@@ -27,6 +27,30 @@ in this GitHub Repository can result in criminal charges brought against
 the persons in question. The author will not be held responsible in the
 event any criminal charges be brought against any individuals misusing
 the information in this GitHub Repository to break the law.
+
+Trained model
+----------------
+I've trained a model that detects each of the following classes which support 9x grid.
+
+1. bicycle
+2. boat
+3. bridge
+4. bus
+5. car
+6. chimneys
+7. crosswalk
+8. fire hydrant
+9. motorcycles
+10. mountains or hills
+11. palm trees
+12. stair
+13. taxi
+14. tow truck
+15. traffic light
+16. traffic sign
+17. truck
+
+This model can be downloaded from https://mikey.id/yolov3.weights. I've provided the other necessary files under **model/**.
 
 Compatibility
 -------------

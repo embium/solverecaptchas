@@ -40,11 +40,11 @@ class SolveImage():
         """Go through procedures to solve image"""
         while True:
             file_path = await self.get_start_data()
-            choices = await self.choose(file_path)
-            await self.click_image(choices)
             if self.pieces == 16:
-                await self.click_verify()
+                await self.click_reload_button()
             elif self.pieces == 9:
+                choices = await self.choose(file_path)
+                await self.click_image(choices)
                 if choices:
                     if await self.is_one_selected():
                         await self.cycle_selected(choices)
@@ -57,7 +57,7 @@ class SolveImage():
                             await self.click_reload_button()
                 else:
                     await self.click_reload_button()
-            result = await self.check_detection(5)
+            result = await self.check_detection(1)
             if result:
                 break
 
@@ -81,7 +81,7 @@ class SolveImage():
 
                     result = await predict(self.net, file_path)
                     if self.title == 'vehicles':
-                        if 'car' in result or 'truck' in result:
+                        if 'car' in result or 'truck' in result or 'bus' in result:
                             new_selected.append(selected[i])
                     if (self.title != 'vehicles' 
                             and self.title.replace('_', ' ') in result):
@@ -107,18 +107,18 @@ class SolveImage():
             for i in range(self.pieces):
                 result = await predict(
                     self.net, os.path.join(self.cur_image_path, f'{i}.jpg'))
+                print(result)
                 if self.title.replace('_', ' ') in result:
                     selected.append(i)
-        else:
-            result = await predict(
-                self.net, image_path, self.title.replace('_', ' '))
-            if result is not False:
-                image_obj = Image.open(result)
-                utils.split_image(image_obj, self.pieces, self.cur_image_path)
-                for i in range(self.pieces-1):
-                    if is_marked(f"{self.cur_image_path}/{i}.jpg"):
-                        selected.append(i)
-                os.remove(result)
+        #else:
+        #    result = await predict(
+        #        self.net, image_path, self.title.replace('_', ' '))
+        #    if result is not False:
+        #        image_obj = Image.open(result)
+        #        utils.split_image(image_obj, self.pieces, self.cur_image_path)
+        #        for i in range(self.pieces):
+        #            if is_marked(f"{self.cur_image_path}/{i}.jpg"):
+        #                selected.append(i)
         return selected
 
     async def get_images(self):

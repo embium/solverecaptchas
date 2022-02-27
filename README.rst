@@ -1,17 +1,17 @@
-.. image:: https://img.shields.io/pypi/v/playwright-nonocaptcha.svg
+.. image:: https://img.shields.io/pypi/v/solverecaptchas.svg
     :alt: PyPI
-    :target: https://pypi.org/project/playwright-nonocaptcha/
-.. image:: https://img.shields.io/pypi/pyversions/playwright-nonocaptcha.svg
+    :target: https://pypi.org/project/solverecaptchas/
+.. image:: https://img.shields.io/pypi/pyversions/solverecaptchas.svg
     :alt: PyPI - Python Version
-    :target: https://pypi.org/project/playwright-nonocaptcha/
-.. image:: https://img.shields.io/pypi/l/playwright-nonocaptcha.svg
+    :target: https://pypi.org/project/solverecaptchas/
+.. image:: https://img.shields.io/pypi/l/solverecaptchas.svg
     :alt: PyPI - License   
-    :target: https://pypi.org/project/playwright-nonocaptcha/
-.. image:: https://img.shields.io/pypi/status/playwright-nonocaptcha.svg
+    :target: https://pypi.org/project/solverecaptchas/
+.. image:: https://img.shields.io/pypi/status/solverecaptchas.svg
     :alt: PyPI - Status
-    :target: https://pypi.org/project/playwright-nonocaptcha/
+    :target: https://pypi.org/project/solverecaptchas/
 
-Playwright nonoCAPTCHA
+Solverecaptchas
 =======================
 
 An async Python library to automate solving ReCAPTCHA v2 using
@@ -62,7 +62,7 @@ Installation
 
 .. code:: shell
 
-   $ pip install playwright-nonocaptcha
+   $ pip install solverecaptchas
 
 Usage
 -----
@@ -74,7 +74,7 @@ If you want to use it in your own script
      import asyncio
      import sys
 
-     from playwright_nonocaptcha.solver import Solver
+     from solverecaptchas.solver import Solver
 
      if len(sys.argv) == 4:
           pageurl, sitekey, proxy = sys.argv[1:]

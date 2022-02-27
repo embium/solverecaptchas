@@ -7,7 +7,7 @@ import sys
 from aiohttp import web
 from urllib.parse import unquote
 
-from playwright_nonocaptcha.solver import Solver
+from solverecaptchas.solver import Solver
 from vosk import Model, KaldiRecognizer, SetLogLevel
 
 model = Model("model")

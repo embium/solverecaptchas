@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 from importlib.machinery import SourceFileLoader
 
 
-module_name = "playwright_nonocaptcha"
+module_name = "solverecaptchas"
 
 module = SourceFileLoader(
     module_name, os.path.join(module_name, "__init__.py")
@@ -24,10 +24,10 @@ setup(
     author_email=module.authors_email,
     license=module.__license__,
     description=module.package_info,
-    url="https://github.com/embium/playwright-nonocaptcha",
+    url="https://github.com/embium/solverecaptchas",
     # Hm, HTTPError: 400 Bad Request from https://test.pypi.org/legacy/
     # The description failed to render in the default format of reStructuredText. See https://test.pypi.org/help/#description-content-type for more information.
-    # long_description=open("README.rst").read(),
+    long_description=open("README.rst").read(),
     platforms="all",
     classifiers=[
         "Development Status :: 4 - Beta",

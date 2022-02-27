@@ -7,8 +7,8 @@ import shutil
 import tempfile
 import time
 
-import playwright_nonocaptcha.utils as utils
-import playwright_nonocaptcha.image as image
+import solverecaptchas.utils as utils
+import solverecaptchas.image as image
 
 from playwright.async_api import async_playwright, TimeoutError
 from playwright_stealth import stealth_async

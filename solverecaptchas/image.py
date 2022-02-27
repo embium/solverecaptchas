@@ -8,9 +8,9 @@ import time
 
 from PIL import Image
 
-from playwright_nonocaptcha import package_dir
-from playwright_nonocaptcha.predict import predict, is_marked
-import playwright_nonocaptcha.utils as utils
+from solverecaptchas import package_dir
+from solverecaptchas.predict import predict, is_marked
+import solverecaptchas.utils as utils
 
 
 class SolveImage():

@@ -25,8 +25,6 @@ setup(
     license=module.__license__,
     description=module.package_info,
     url="https://github.com/embium/solverecaptchas",
-    # Hm, HTTPError: 400 Bad Request from https://test.pypi.org/legacy/
-    # The description failed to render in the default format of reStructuredText. See https://test.pypi.org/help/#description-content-type for more information.
     long_description=open("README.rst").read(),
     platforms="all",
     classifiers=[
@@ -39,11 +37,13 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "Programming Language :: JavaScript",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering",
         "Topic :: Software Development :: Libraries",
         "Topic :: Utilities"
     ],
+    python_requires=">=3.7",
     package_data={'data': ['*.*']},
     include_package_data=True,
     packages=find_packages(),

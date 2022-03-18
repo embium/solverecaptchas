@@ -9,14 +9,6 @@ module = SourceFileLoader(
     module_name, os.path.join(module_name, "__init__.py")
 ).load_module()
 
-
-def load_requirements(fname):
-    """ load requirements from a pip requirements file """
-    with open(fname) as f:
-        line_iter = (line.strip() for line in f.readlines())
-        return [line for line in line_iter if line and line[0] != "#"]
-
-
 setup(
     name=module_name.replace("_", "-"),
     version=module.__version__,
@@ -47,5 +39,16 @@ setup(
     package_data={'data': ['*.*']},
     include_package_data=True,
     packages=find_packages(),
-    install_requires=load_requirements("requirements.txt"),
+    install_requires=[
+        "playwright",
+        "playwright-stealth",
+        "pydub",
+        "vosk",
+        "requests",
+        "aiohttp",
+        "aiofiles",
+        "numpy",
+        "pillow",
+        "opencv-python"
+    ]
 )
